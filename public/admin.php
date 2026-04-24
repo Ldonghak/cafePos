@@ -21,7 +21,7 @@ if ($sd && $ed) {
 $stmt = $pdo->prepare("
     SELECT o.*, 
            GROUP_CONCAT(oi.menu_name ORDER BY oi.id SEPARATOR ', ') AS items_summary,
-           (SELECT ip_address FROM order_logs WHERE order_id = o.id ORDER BY id DESC LIMIT 1) as last_ip
+           (SELECT COALESCE(username, ip_address) FROM order_logs WHERE order_id = o.id ORDER BY id DESC LIMIT 1) as last_modifier
     FROM orders o 
     LEFT JOIN order_items oi ON oi.order_id=o.id 
     $whereClause 
@@ -262,8 +262,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <td><span class="stag st-<?=$o['status']?>"><?=$o['status']?></span></td>
         <td style="color:var(--muted);font-size:.78rem;white-space:nowrap">
           <?=date('m/d H:i',strtotime($o['created_at']))?>
-          <?php if($o['last_ip']): ?>
-            <br><a href="#" onclick="openOrderLogs(<?=$o['id']?>, event); return false;" style="color:var(--ac);text-decoration:underline;font-size:0.7rem;" title="변경 로그 보기">IP: <?=htmlspecialchars($o['last_ip'])?></a>
+          <?php if($o['last_modifier']): ?>
+            <br><a href="#" onclick="openOrderLogs(<?=$o['id']?>, event); return false;" style="color:var(--ac);text-decoration:underline;font-size:0.75rem;font-weight:600" title="변경 로그 보기">ID: <?=htmlspecialchars($o['last_modifier'])?></a>
           <?php endif; ?>
         </td>
       </tr>
@@ -452,7 +452,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <h3>📝 주문 처리 로그 <span id="log_od_id" style="color:var(--muted);font-weight:400"></span></h3>
     <div class="tw" style="max-height:300px;overflow-y:auto;border:1px solid var(--bdr);border-radius:10px;margin-bottom:14px">
       <table style="margin-bottom:0">
-        <thead><tr><th>일시</th><th>행동</th><th>상세</th><th>IP</th></tr></thead>
+        <thead><tr><th>일시</th><th>행동</th><th>상세</th><th>작업자(ID)</th></tr></thead>
         <tbody id="log_items"></tbody>
       </table>
     </div>
@@ -661,7 +661,7 @@ async function openOrderLogs(id, e) {
         <td style="font-size:0.75rem">${log.created_at}</td>
         <td><span class="stag" style="background:var(--sur2);border:1px solid var(--bdr)">${log.action}</span></td>
         <td style="font-size:0.8rem">${log.details}</td>
-        <td style="font-size:0.75rem;color:var(--muted)">${log.ip_address}</td>
+        <td style="font-size:0.8rem;color:var(--muted);font-weight:600">${log.username || log.ip_address}</td>
       `;
       tbody.appendChild(tr);
     });

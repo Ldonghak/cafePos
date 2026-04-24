@@ -125,4 +125,8 @@ try {
         echo json_encode(['success' => false, 'message' => '허용되지 않은 메서드입니다.']);
     }
 
-} catch
+} catch (PDOException $e) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+}
