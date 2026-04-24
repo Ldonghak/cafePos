@@ -19,7 +19,7 @@ foreach ($menus as $m) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>카페 POS 결제 시스템</title>
+<title>LeeLee Cafe | POS 결제 시스템</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
 
@@ -305,7 +305,7 @@ foreach ($menus as $m) {
 <body>
 
 <header>
-  <div class="logo">☕ <span>Cafe</span>POS</div>
+  <div class="logo">🌿 <span>LeeLee</span> Cafe</div>
   <div class="time" id="clock"></div>
   <div style="display:flex;gap:8px">
     <a href="/promo2.php" class="admin-btn" target="_blank">🌱 청춘 스토리</a>

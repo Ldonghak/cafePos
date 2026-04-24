@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>로그인 | CafePOS 관리자</title>
+<title>LeeLee Cafe | 관리자 로그인</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
   :root {
@@ -193,9 +193,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 <div class="login-wrap">
   <div class="logo-area">
-    <span class="logo-icon">☕</span>
-    <div class="logo-text"><span>Cafe</span>POS</div>
-    <div class="logo-sub">관리자 시스템</div>
+    <span class="logo-icon">🌿</span>
+    <div class="logo-text"><span>LeeLee</span> Cafe</div>
+    <div class="logo-sub">Premium Handcrafted Drinks</div>
   </div>
 
   <div class="card">

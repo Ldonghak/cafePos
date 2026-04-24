@@ -31,7 +31,7 @@ function priceColor(int $price): string {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="refresh" content="120"> <!-- 2분마다 자동 새로고침 -->
-<title>메뉴판 | CafePOS</title>
+<title>LeeLee Cafe | 메뉴판</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 <style>
@@ -304,9 +304,9 @@ body::before {
 <!-- ─── HEADER ─── -->
 <header class="board-header">
   <div class="brand">
-    <div class="brand-icon">☕</div>
+    <div class="brand-icon">🌿</div>
     <div>
-      <div class="brand-name">Café &amp; Co.</div>
+      <div class="brand-name">LeeLee Cafe</div>
       <div class="brand-sub">Premium Handcrafted Drinks</div>
     </div>
   </div>

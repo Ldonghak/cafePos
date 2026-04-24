@@ -82,7 +82,7 @@ function getThumbPath($menuName, $catBg) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>메뉴 전광판 | Cafe POS</title>
+<title>LeeLee Cafe | 메뉴 전광판</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;700;900&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }

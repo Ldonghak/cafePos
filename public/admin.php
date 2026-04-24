@@ -64,7 +64,7 @@ foreach ($sales_data as $row) {
 <html lang="ko">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>관리자 | CafePOS</title>
+<title>LeeLee Cafe | 관리자</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
 :root{--bg:#0f0f13;--sur:#1a1a22;--sur2:#242430;--ac:#6c63ff;--ac2:#ff6584;--green:#00d084;--amber:#ffb347;--red:#ff4d6d;--text:#f0f0f8;--muted:#8888aa;--bdr:rgba(255,255,255,.07);--r:14px}
@@ -155,7 +155,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 </head>
 <body>
 <header>
-  <div class="logo">☕ <span>Cafe</span>POS <small style="font-size:.7rem;color:var(--muted);margin-left:4px;">관리자</small></div>
+  <div class="logo">🌿 <span>LeeLee</span> Cafe <small style="font-size:.7rem;color:var(--muted);margin-left:4px;">관리자</small></div>
   <div class="hright">
     <span class="hi">👤 <?=htmlspecialchars($me['name'])?> (<?=htmlspecialchars($me['role'])?>)</span>
     <a href="/index.php" class="hbtn">← POS</a>
