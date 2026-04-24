@@ -18,7 +18,17 @@ if ($sd && $ed) {
     $params[] = $ed . ' 23:59:59';
 }
 
-$stmt = $pdo->prepare("SELECT o.*, GROUP_CONCAT(oi.menu_name ORDER BY oi.id SEPARATOR ', ') AS items_summary FROM orders o LEFT JOIN order_items oi ON oi.order_id=o.id $whereClause GROUP BY o.id ORDER BY o.created_at DESC LIMIT 500");
+$stmt = $pdo->prepare("
+    SELECT o.*, 
+           GROUP_CONCAT(oi.menu_name ORDER BY oi.id SEPARATOR ', ') AS items_summary,
+           (SELECT ip_address FROM order_logs WHERE order_id = o.id ORDER BY id DESC LIMIT 1) as last_ip
+    FROM orders o 
+    LEFT JOIN order_items oi ON oi.order_id=o.id 
+    $whereClause 
+    GROUP BY o.id 
+    ORDER BY o.created_at DESC 
+    LIMIT 500
+");
 $stmt->execute($params);
 $orders = $stmt->fetchAll();
 
@@ -250,7 +260,12 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <td style="color:var(--green);font-weight:700"><?=number_format($o['total_price'])?>원</td>
         <td style="color:var(--muted);font-size:.8rem"><?=$o['card_last4']?'****-'.htmlspecialchars($o['card_last4']):'-'?></td>
         <td><span class="stag st-<?=$o['status']?>"><?=$o['status']?></span></td>
-        <td style="color:var(--muted);font-size:.78rem;white-space:nowrap"><?=date('m/d H:i',strtotime($o['created_at']))?></td>
+        <td style="color:var(--muted);font-size:.78rem;white-space:nowrap">
+          <?=date('m/d H:i',strtotime($o['created_at']))?>
+          <?php if($o['last_ip']): ?>
+            <br><a href="#" onclick="openOrderLogs(<?=$o['id']?>, event); return false;" style="color:var(--ac);text-decoration:underline;font-size:0.7rem;" title="변경 로그 보기">IP: <?=htmlspecialchars($o['last_ip'])?></a>
+          <?php endif; ?>
+        </td>
       </tr>
       <?php endforeach; endif; ?>
       </tbody>
@@ -431,7 +446,33 @@ tr:hover td{background:rgba(255,255,255,.02)}
   </div>
 </div>
 
+<!-- ═══ 주문 로그 모달 ═══ -->
+<div id="logModal" class="mo">
+  <div class="mbox" style="max-width:500px">
+    <h3>📝 주문 처리 로그 <span id="log_od_id" style="color:var(--muted);font-weight:400"></span></h3>
+    <div class="tw" style="max-height:300px;overflow-y:auto;border:1px solid var(--bdr);border-radius:10px;margin-bottom:14px">
+      <table style="margin-bottom:0">
+        <thead><tr><th>일시</th><th>행동</th><th>상세</th><th>IP</th></tr></thead>
+        <tbody id="log_items"></tbody>
+      </table>
+    </div>
+    <div class="mactions">
+      <button class="mcancel" onclick="document.getElementById('logModal').classList.remove('show')" style="flex:1">닫기</button>
+    </div>
+  </div>
+</div>
+
 <script>
+// ─── 탭 유지하며 새로고침 ───
+function reloadPage() {
+  const url = new URL(window.location.href);
+  const activeTab = document.querySelector('.tab-panel.active');
+  if (activeTab) {
+    const tabName = activeTab.id.replace('tab-', '');
+    url.searchParams.set('tab', tabName);
+  }
+  window.location.href = url.toString();
+}
 // ─── 탭 전환 ───
 const TAB_NAMES = ['menu','order','sales','user','pay'];
 function switchTab(name){
@@ -454,7 +495,7 @@ document.getElementById('addMenuForm').addEventListener('submit',async e=>{
       price:parseInt(document.getElementById('mPrice').value),
       category:document.getElementById('mCat').value,
       description:document.getElementById('mDesc').value.trim()})}).then(r=>r.json());
-  if(r.success){alert('✅ '+r.message);location.reload();}else alert('❌ '+r.message);
+  if(r.success){alert('✅ '+r.message);reloadPage();}else alert('❌ '+r.message);
 });
 
 // ─── 메뉴 삭제 ───
@@ -498,7 +539,7 @@ async function submitEditMenu() {
   if (r.success) {
     alert('✅ ' + r.message);
     document.getElementById('editMenuModal').classList.remove('show');
-    location.reload();
+    reloadPage();
   } else {
     alert('❌ ' + r.message);
   }
@@ -512,7 +553,7 @@ document.getElementById('addUserForm')?.addEventListener('submit',async e=>{
       name:document.getElementById('uName').value.trim(),
       password:document.getElementById('uPw').value,
       role:document.getElementById('uRole').value})}).then(r=>r.json());
-  if(r.success){alert('✅ '+r.message);location.reload();}else alert('❌ '+r.message);
+  if(r.success){alert('✅ '+r.message);reloadPage();}else alert('❌ '+r.message);
 });
 
 // ─── 주문 상세 및 수정/취소 ───
@@ -579,9 +620,7 @@ async function saveOrderChanges() {
   }).then(r=>r.json());
   if(res.success) { 
     alert('✅ 수정되었습니다.'); 
-    const url = new URL(window.location.href);
-    url.searchParams.set('tab', 'order');
-    window.location.href = url.toString();
+    reloadPage();
   }
   else { alert('❌ ' + res.message); }
 }
@@ -599,11 +638,36 @@ async function cancelOrder() {
   }).then(r=>r.json());
   if(res.success) { 
     alert('✅ 취소 처리되었습니다.'); 
-    const url = new URL(window.location.href);
-    url.searchParams.set('tab', 'order');
-    window.location.href = url.toString();
+    reloadPage();
   }
   else { alert('❌ ' + res.message); }
+}
+
+async function openOrderLogs(id, e) {
+  if (e) e.stopPropagation();
+  const res = await fetch('/api/orders.php?action=logs&id=' + id).then(r=>r.json());
+  if(!res.success) { alert('❌ ' + res.message); return; }
+  
+  document.getElementById('log_od_id').textContent = '#' + id;
+  const tbody = document.getElementById('log_items');
+  tbody.innerHTML = '';
+  
+  if (res.data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty">로그가 없습니다.</td></tr>';
+  } else {
+    res.data.forEach(log => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="font-size:0.75rem">${log.created_at}</td>
+        <td><span class="stag" style="background:var(--sur2);border:1px solid var(--bdr)">${log.action}</span></td>
+        <td style="font-size:0.8rem">${log.details}</td>
+        <td style="font-size:0.75rem;color:var(--muted)">${log.ip_address}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+  
+  document.getElementById('logModal').classList.add('show');
 }
 
 // ─── 사용자 삭제 ───

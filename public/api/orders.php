@@ -2,6 +2,7 @@
 // API: 주문 생성
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../auth.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -58,9 +59,16 @@ try {
 
         $pdo->beginTransaction();
         
+        $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
+        $user = currentUser();
+        $username = $user ? $user['username'] : 'system';
+        
         if (isset($input['status'])) {
             $stmt = $pdo->prepare("UPDATE orders SET status = ? WHERE id = ?");
             $stmt->execute([$input['status'], $orderId]);
+            
+            $logStmt = $pdo->prepare("INSERT INTO order_logs (order_id, action, details, ip_address, username) VALUES (?, '상태변경', ?, ?, ?)");
+            $logStmt->execute([$orderId, "상태: " . $input['status'], $ip, $username]);
         }
         
         if (isset($input['items'])) {
@@ -79,11 +87,22 @@ try {
                 ]);
             }
             $pdo->prepare("UPDATE orders SET total_price = ? WHERE id = ?")->execute([$totalPrice, $orderId]);
+            
+            $logStmt = $pdo->prepare("INSERT INTO order_logs (order_id, action, details, ip_address, username) VALUES (?, '내역수정', ?, ?, ?)");
+            $logStmt->execute([$orderId, "총 결제액: " . $totalPrice . "원", $ip, $username]);
         }
         $pdo->commit();
         echo json_encode(['success' => true]);
 
     } elseif ($method === 'GET') {
+        if (isset($_GET['action']) && $_GET['action'] === 'logs' && isset($_GET['id'])) {
+            $orderId = (int)$_GET['id'];
+            $logs = $pdo->prepare("SELECT * FROM order_logs WHERE order_id=? ORDER BY created_at DESC");
+            $logs->execute([$orderId]);
+            echo json_encode(['success'=>true, 'data'=>$logs->fetchAll(PDO::FETCH_ASSOC)]);
+            exit;
+        }
+        
         if (isset($_GET['id'])) {
             $orderId = (int)$_GET['id'];
             $order = $pdo->prepare("SELECT * FROM orders WHERE id=?");
@@ -106,8 +125,4 @@ try {
         echo json_encode(['success' => false, 'message' => '허용되지 않은 메서드입니다.']);
     }
 
-} catch (PDOException $e) {
-    if ($pdo->inTransaction()) $pdo->rollBack();
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-}
+} catch

@@ -112,5 +112,9 @@ try {
 
 } catch (PDOException $e) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    $msg = $e->getMessage();
+    if ($e->getCode() == 23000 || strpos($msg, 'Duplicate entry') !== false || strpos($msg, '1062') !== false) {
+        $msg = '이미 사용 중인 아이디입니다. 다른 아이디를 입력해주세요.';
+    }
+    echo json_encode(['success' => false, 'message' => $msg]);
 }
