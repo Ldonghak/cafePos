@@ -6,6 +6,27 @@ requireLogin('admin');
 $me = currentUser();
 $pdo = getDB();
 $menus  = $pdo->query("SELECT * FROM menus ORDER BY category, id")->fetchAll();
+// Load categories with sort order, auto-seed if needed
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS categories (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(50) NOT NULL UNIQUE, sort_order INT NOT NULL DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+    $catCount = $pdo->query("SELECT COUNT(*) FROM categories")->fetchColumn();
+    if ($catCount == 0) {
+        $existing = $pdo->query("SELECT DISTINCT category FROM menus")->fetchAll(PDO::FETCH_COLUMN);
+        $defaultOrder = ['\ucee4\ud53c','\ub77c\ub5bc','\uc5d0\uc774\ub4dc','\uc2a4\ubb34\ub514','\ucc28','\uae30\ud0c0'];
+        $sorted = array_merge(array_intersect($defaultOrder, $existing), array_diff($existing, $defaultOrder));
+        $ins = $pdo->prepare("INSERT IGNORE INTO categories (name, sort_order) VALUES (?, ?)");
+        foreach ($sorted as $i => $cat) { $ins->execute([$cat, $i + 1]); }
+    }
+    $categories = $pdo->query("SELECT * FROM categories ORDER BY sort_order, id")->fetchAll();
+    // Re-order menus using category sort
+    $catNames = array_column($categories, 'name');
+    $catNames_js = htmlspecialchars(json_encode($catNames), ENT_QUOTES);
+} catch (Exception $e) {
+    $categories = [];
+    $catNames = [];
+    $catNames_js = '[]';
+}
+$menus = $pdo->query("SELECT m.* FROM menus m LEFT JOIN categories c ON c.name = m.category ORDER BY COALESCE(c.sort_order, 9999), m.id")->fetchAll();
 $users  = $pdo->query("SELECT id,username,name,role,is_active,created_at FROM users ORDER BY id")->fetchAll();
 
 $sd = $_GET['sd'] ?? '';
@@ -166,6 +187,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 <!-- TABS -->
 <div class="tabs">
   <div class="tab active" onclick="switchTab('menu')">🍽 메뉴관리</div>
+  <div class="tab" onclick="switchTab('category')">🏷 카테고리관리</div>
   <div class="tab" onclick="switchTab('order')">📦 주문내역</div>
   <div class="tab" onclick="switchTab('sales')">📊 매출&정산</div>
   <?php if(isAdmin()): ?>
@@ -189,7 +211,14 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <div class="fg"><label>메뉴 이름</label><input type="text" id="mName" placeholder="예: 바닐라라떼" required></div>
         <div class="fg"><label>가격 (원)</label><input type="number" id="mPrice" placeholder="예: 4500" min="100" step="100" required></div>
         <div class="fg"><label>카테고리</label>
-          <select id="mCat"><option value="커피">☕ 커피</option><option value="스무디">🍓 스무디</option><option value="차">🍵 차</option><option value="기타">🥤 기타</option></select>
+          <select id="mCat">
+            <?php foreach($categories as $c): ?>
+            <option value="<?=htmlspecialchars($c['name'])?>"><?=htmlspecialchars($c['name'])?></option>
+            <?php endforeach; ?>
+            <?php if(empty($categories)): ?>
+            <option value="커피">커피</option><option value="기타">기타</option>
+            <?php endif; ?>
+          </select>
         </div>
         <div class="fg"><label>메뉴 설명 <small style="color:var(--muted);font-weight:400">(POS 화면에 표시)</small></label>
           <textarea id="mDesc" placeholder="예: 승언도 스페셔로 추출한 승었한 블랜드 (옵션: 다시 스틜민�...)"
@@ -233,6 +262,51 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <?php endforeach; ?>
         </tbody>
       </table></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ 카테고리관리 탭 ═══ -->
+<div id="tab-category" class="tab-panel">
+<div class="wrap">
+  <div class="grid2" style="grid-template-columns:340px 1fr">
+    <!-- 카테고리 추가 -->
+    <div class="card">
+      <div class="ctitle">🏷 카테고리 추가</div>
+      <div class="fg">
+        <label>카테고리명</label>
+        <input type="text" id="newCatName" placeholder="예: 디저트" maxlength="30">
+      </div>
+      <button class="btn" onclick="addCategory()">+ 카테고리 추가</button>
+      <div id="catMsg" style="margin-top:12px;font-size:.82rem;display:none"></div>
+    </div>
+
+    <!-- 카테고리 목록 + 순서 변경 -->
+    <div class="card">
+      <div class="ctitle">📋 카테고리 목록
+        <span class="badge" id="catCount"><?=count($categories)?>개</span>
+        <button class="abtn abtn-pw" style="margin-left:auto" onclick="saveCatOrder()">💾 순서 저장</button>
+      </div>
+      <div style="font-size:.76rem;color:var(--muted);margin-bottom:14px">☰ 드래그하여 순서를 변경하세요. 저장 버튼을 눌러야 적용됩니다.</div>
+      <ul id="catList" style="list-style:none;display:flex;flex-direction:column;gap:8px">
+        <?php foreach($categories as $c): ?>
+        <li data-id="<?=$c['id']?>" data-hidden="<?=$c['is_hidden']??0?>" style="display:flex;align-items:center;gap:10px;background:<?=($c['is_hidden']??0)?'rgba(255,255,255,0.03)':'var(--sur2)'?>;border:1px solid <?=($c['is_hidden']??0)?'rgba(255,255,255,0.04)':'var(--bdr)'?>;border-radius:10px;padding:12px 14px;cursor:grab;user-select:none;opacity:<?=($c['is_hidden']??0)?'0.5':'1'?>">
+          <span style="color:var(--muted);font-size:1.1rem">☰</span>
+          <span style="flex:1;font-weight:600"><?=htmlspecialchars($c['name'])?></span>
+          <?php if($c['is_hidden']??0): ?>
+          <span style="font-size:.7rem;background:rgba(255,179,71,.15);color:var(--amber);border:1px solid rgba(255,179,71,.3);padding:2px 8px;border-radius:12px">숨김</span>
+          <?php else: ?>
+          <span style="font-size:.7rem;background:rgba(0,208,132,.1);color:var(--green);border:1px solid rgba(0,208,132,.3);padding:2px 8px;border-radius:12px">표시</span>
+          <?php endif; ?>
+          <button class="abtn abtn-tog" onclick="toggleCategory(<?=$c['id']?>, this)"><?=($c['is_hidden']??0)?'보이기':'숨기기'?></button>
+          <button class="abtn abtn-del" onclick="deleteCategory(<?=$c['id']?>, '<?=htmlspecialchars($c['name'],ENT_QUOTES)?>')" style="margin-right:0">삭제</button>
+        </li>
+        <?php endforeach; ?>
+        <?php if(empty($categories)): ?>
+        <li style="text-align:center;color:var(--muted);padding:24px">카테고리가 없습니다</li>
+        <?php endif; ?>
+      </ul>
     </div>
   </div>
 </div>
@@ -485,7 +559,7 @@ function reloadPage() {
   window.location.href = url.toString();
 }
 // ─── 탭 전환 ───
-const TAB_NAMES = ['menu','order','sales','user','pay'];
+const TAB_NAMES = ['menu','category','order','sales','user','pay'];
 function switchTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   let index = TAB_NAMES.indexOf(name);
@@ -497,6 +571,86 @@ function switchTab(name){
   document.getElementById('tab-'+name)?.classList.add('active');
   if(name==='pay') loadGateways();
 }
+
+// ─── 카테고리 관리 ───
+async function addCategory() {
+  const name = document.getElementById('newCatName').value.trim();
+  const msg = document.getElementById('catMsg');
+  if (!name) { showCatMsg('카테고리명을 입력해주세요.', false); return; }
+  const r = await fetch('/api/categories.php?action=add', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name})
+  }).then(r=>r.json());
+  showCatMsg(r.message, r.success);
+  if (r.success) { document.getElementById('newCatName').value = ''; reloadPage(); }
+}
+
+async function deleteCategory(id, name) {
+  if (!confirm(`'${name}' \uce74\ud14c\uace0\ub9ac\ub97c \uc0ad\uc81c\ud558\uc2dc\uaca0\uc2b5\ub2c8\uae4c?\n(\ud574\ub2f9 \uce74\ud14c\uace0\ub9ac\uc5d0 \uba54\ub274\uac00 \uc788\uc73c\uba74 \uc0ad\uc81c\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4)`)) return;
+  const r = await fetch('/api/categories.php?action=delete', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({id})
+  }).then(r=>r.json());
+  if (r.success) reloadPage(); else alert('\u274c ' + r.message);
+}
+
+async function toggleCategory(id, btn) {
+  const li = btn.closest('li');
+  const r = await fetch('/api/categories.php?action=toggle', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({id})
+  }).then(r=>r.json());
+  if (!r.success) { alert('\u274c ' + r.message); return; }
+  // Update UI without full reload
+  const isHidden = r.is_hidden === 1;
+  li.dataset.hidden = isHidden ? '1' : '0';
+  li.style.opacity = isHidden ? '0.5' : '1';
+  li.style.background = isHidden ? 'rgba(255,255,255,0.03)' : 'var(--sur2)';
+  li.style.borderColor = isHidden ? 'rgba(255,255,255,0.04)' : 'var(--bdr)';
+  btn.textContent = isHidden ? '\ubcf4\uc774\uae30' : '\uc228\uae30\uae30';
+  // Update badge
+  const badge = li.querySelector('span[style*="border-radius:12px"]');
+  if (badge) {
+    badge.textContent = isHidden ? '\uc228\uae40' : '\ud45c\uc2dc';
+    badge.style.background = isHidden ? 'rgba(255,179,71,.15)' : 'rgba(0,208,132,.1)';
+    badge.style.color = isHidden ? 'var(--amber)' : 'var(--green)';
+    badge.style.borderColor = isHidden ? 'rgba(255,179,71,.3)' : 'rgba(0,208,132,.3)';
+  }
+}
+
+async function saveCatOrder() {
+  const items = document.querySelectorAll('#catList li[data-id]');
+  const ids = Array.from(items).map(li => parseInt(li.dataset.id));
+  const r = await fetch('/api/categories.php?action=reorder', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ids})
+  }).then(r=>r.json());
+  if (r.success) { alert('✅ 카테고리 순서가 저장되었습니다.'); reloadPage(); }
+  else alert('❌ ' + r.message);
+}
+
+function showCatMsg(msg, ok) {
+  const el = document.getElementById('catMsg');
+  el.style.display = 'block';
+  el.style.color = ok ? 'var(--green)' : 'var(--red)';
+  el.textContent = (ok ? '✅ ' : '❌ ') + msg;
+}
+
+// Drag-to-reorder for category list
+(function() {
+  let dragging = null;
+  function initDrag() {
+    const list = document.getElementById('catList');
+    if (!list) return;
+    list.querySelectorAll('li[data-id]').forEach(li => {
+      li.addEventListener('dragstart', e => { dragging = li; li.style.opacity='0.4'; e.dataTransfer.effectAllowed='move'; });
+      li.addEventListener('dragend', () => { dragging=null; list.querySelectorAll('li').forEach(l=>l.style.opacity=''); });
+      li.addEventListener('dragover', e => { e.preventDefault(); if(dragging && dragging!==li){ const r=li.getBoundingClientRect(); const after=e.clientY>r.top+r.height/2; list.insertBefore(dragging,after?li.nextSibling:li); } });
+      li.setAttribute('draggable','true');
+    });
+  }
+  document.addEventListener('DOMContentLoaded', initDrag);
+})();
 
 // ─── 메뉴 추가 ───
 document.getElementById('addMenuForm').addEventListener('submit',async e=>{

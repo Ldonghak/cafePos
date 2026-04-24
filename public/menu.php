@@ -2,7 +2,8 @@
 require_once __DIR__ . '/db.php';
 try {
     $pdo   = getDB();
-    $menus = $pdo->query("SELECT * FROM menus WHERE is_available = 1 ORDER BY FIELD(category,'커피','라떼','에이드','스무디','차','기타'), id")->fetchAll();
+    $pdo->exec("CREATE TABLE IF NOT EXISTS categories (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(50) NOT NULL UNIQUE, sort_order INT NOT NULL DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+    $menus = $pdo->query("SELECT m.* FROM menus m LEFT JOIN categories c ON c.name = m.category WHERE m.is_available = 1 AND (c.id IS NULL OR c.is_hidden = 0) ORDER BY COALESCE(c.sort_order, 9999), m.id")->fetchAll();
 } catch (Exception $e) { $menus = []; }
 
 $grouped = [];
