@@ -103,14 +103,14 @@ body::before {
   font-variant-numeric: tabular-nums; letter-spacing: 1px;
 }
 .nav-tabs {
-  display: flex; gap: 2px;
+  display: flex; gap: 4px;
   background: #f0f0f0;
   border: 1px solid var(--border);
-  border-radius: 50px; padding: 4px;
+  border-radius: 50px; padding: 6px;
 }
 .nav-tab {
-  padding: 5px 14px; border-radius: 50px;
-  font-size: .75rem; font-weight: 600; letter-spacing: .5px;
+  padding: 10px 24px; border-radius: 50px;
+  font-size: 1rem; font-weight: 700; letter-spacing: .5px;
   color: var(--muted); cursor: pointer;
   transition: all .25s; border: none; background: none;
   font-family: inherit;

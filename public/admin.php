@@ -85,9 +85,9 @@ header{display:flex;align-items:center;justify-content:space-between;padding:14p
 .tab-panel{display:none}.tab-panel.active{display:block}
 
 .wrap{max-width:1100px;margin:0 auto;padding:28px 22px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.grid2{display:grid;grid-template-columns:320px 1fr;gap:22px}
 .full{grid-column:1/-1}
-@media(max-width:720px){.grid2{grid-template-columns:1fr}}
+@media(max-width:850px){.grid2{grid-template-columns:1fr}}
 
 /* stats */
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px}
@@ -204,19 +204,30 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <thead><tr><th>메뉴명</th><th>가격</th><th>분류</th><th>관리</th></tr></thead>
         <tbody id="menuTbody">
         <?php $tmap=['커피'=>'tc','스무디'=>'ts','차'=>'tt','기타'=>'te'];
-        foreach($menus as $m): $tc=$tmap[$m['category']]??'te'; ?>
+        $current_category = '';
+        foreach($menus as $m): $tc=$tmap[$m['category']]??'te'; 
+          if ($current_category !== $m['category']):
+            $current_category = $m['category'];
+        ?>
+        <tr style="background:var(--sur2)">
+          <td colspan="4" style="font-weight:800;color:var(--text);padding:8px 11px;font-size:0.9rem;border-bottom:1px solid var(--bdr)">
+            <span class="tag <?=$tc?>"><?=htmlspecialchars($current_category)?></span> 카테고리
+          </td>
+        </tr>
+        <?php endif; ?>
+        <tr id="mr-<?=$m['id']?>">
           <td style="font-weight:600;<?=$m['is_available']==0?'opacity:.4;':''?>">
             <?=htmlspecialchars($m['name'])?>
             <?php if(!empty($m['description'])): ?>
             <div style="font-size:.72rem;color:var(--muted);font-weight:400;margin-top:2px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><?=htmlspecialchars($m['description'])?></div>
             <?php endif; ?>
           </td>
-          <td style="color:var(--ac);font-weight:700"><?=number_format($m['price'])?>원</td>
-          <td><span class="tag <?=$tc?>"><?=htmlspecialchars($m['category'])?></span></td>
-          <td>
-            <button class="abtn abtn-pw" onclick="openEditMenu(<?=$m['id']?>,<?=htmlspecialchars(json_encode(['name'=>$m['name'],'price'=>$m['price'],'category'=>$m['category'],'description'=>$m['description']??'']),ENT_QUOTES)?> )">수정</button>
-            <button class="abtn abtn-tog" onclick="toggleMenu(<?=$m['id']?>,this)"><?=$m['is_available']?'숨김':'표시'?></button>
-            <button class="abtn abtn-del" onclick="deleteMenu(<?=$m['id']?>)">삭제</button>
+          <td style="color:var(--ac);font-weight:700;white-space:nowrap"><?=number_format($m['price'])?>원</td>
+          <td style="white-space:nowrap"><span class="tag <?=$tc?>" style="white-space:nowrap;display:inline-block"><?=htmlspecialchars($m['category'])?></span></td>
+          <td style="white-space:nowrap">
+            <button class="abtn abtn-pw" style="white-space:nowrap" onclick="openEditMenu(<?=$m['id']?>,<?=htmlspecialchars(json_encode(['name'=>$m['name'],'price'=>$m['price'],'category'=>$m['category'],'description'=>$m['description']??'']),ENT_QUOTES)?> )">수정</button>
+            <button class="abtn abtn-tog" style="white-space:nowrap" onclick="toggleMenu(<?=$m['id']?>,this)"><?=$m['is_available']?'숨김':'표시'?></button>
+            <button class="abtn abtn-del" style="white-space:nowrap" onclick="deleteMenu(<?=$m['id']?>)">삭제</button>
           </td>
         </tr>
         <?php endforeach; ?>

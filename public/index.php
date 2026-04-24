@@ -308,9 +308,10 @@ foreach ($menus as $m) {
   <div class="logo">☕ <span>Cafe</span>POS</div>
   <div class="time" id="clock"></div>
   <div style="display:flex;gap:8px">
-    <a href="/promo2.php" class="admin-btn" style="background:#00d26a;color:#fff;border:none;" target="_blank">🌱 청춘 스토리</a>
+    <a href="/promo2.php" class="admin-btn" target="_blank">🌱 청춘 스토리</a>
     <a href="/promo.php" class="admin-btn" target="_blank">📖 브랜드 스토리</a>
     <a href="/menu.php" class="admin-btn" target="_blank">🪧 메뉴판</a>
+    <a href="/signage.php" class="admin-btn" target="_blank">📺 메뉴판 소개</a>
     <a href="/admin.php" class="admin-btn">⚙ 관리자</a>
   </div>
 </header>
